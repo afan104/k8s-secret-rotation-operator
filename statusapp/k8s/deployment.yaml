@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: status-app
+  labels:
+    app.kubernetes.io/name: status-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: status-app
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: status-app
+    spec:
+      containers:
+        - name: status-app
+          image: status-app:local
+          imagePullPolicy: Never # image only exists locally, never try to pull from a registry
+          ports:
+            - containerPort: 8080
+          envFrom: # injects the info from these files into env at runtime
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: app-secret
+          livenessProbe: # will restart if status endpoint returns non-success code, react slowly to avoid killing a healthy but slow-starting container
+            httpGet:
+              path: /status
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 5
+          readinessProbe: # flips the pod out of the Service's routing table when status endpoint returns non-success, react fast since withholding traffic is low-cost
+            httpGet:
+              path: /status
+              port: 8080
+            initialDelaySeconds: 0
+            periodSeconds: 5
+            failureThreshold: 1

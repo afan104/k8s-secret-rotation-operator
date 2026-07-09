@@ -62,19 +62,19 @@ A `RotatingSecret` has two parts: `spec`, which you write and the operator reads
 
 **Spec fields:**
 
-| Field | Type | Meaning |
-|---|---|---|
-| `targetSecretName` | string | Name of the `Secret` object the operator creates and updates. |
-| `rotationIntervalSeconds` | int | How often to generate a new credential. |
-| `length` | int | Length of the generated credential (default 32). |
+| Field                       | Type   | Meaning                                                        |
+| --------------------------- | ------ | -------------------------------------------------------------- |
+| `targetSecretName`        | string | Name of the`Secret` object the operator creates and updates. |
+| `rotationIntervalSeconds` | int    | How often to generate a new credential.                        |
+| `length`                  | int    | Length of the generated credential (default 32).               |
 
 **Status fields:**
 
-| Field | Type | Meaning |
-|---|---|---|
-| `lastRotatedAt` | timestamp | When the credential was last generated. |
-| `expiresAt` | timestamp | `lastRotatedAt` + `rotationIntervalSeconds`. The operator requeues before this. |
-| `rotationCount` | int | Incremented on every rotation, useful for confirming the loop is actually running. |
+| Field             | Type      | Meaning                                                                             |
+| ----------------- | --------- | ----------------------------------------------------------------------------------- |
+| `lastRotatedAt` | timestamp | When the credential was last generated.                                             |
+| `expiresAt`     | timestamp | `lastRotatedAt` + `rotationIntervalSeconds`. The operator requeues before this. |
+| `rotationCount` | int       | Incremented on every rotation, useful for confirming the loop is actually running.  |
 
 **Example**, after the operator has reconciled it at least once:
 
@@ -108,9 +108,10 @@ status:
 It never returns the raw secret value. The endpoint has no authentication, so anything it returns is visible to whatever can reach it — returning the actual credential would defeat the point of a project about protecting credentials. Confirming the secret loaded, and its length, is enough to prove the wiring worked.
 
 **Steps:**
+
 1. Scaffold the app at [start.spring.io](https://start.spring.io): Maven, Java 21, Spring Boot, "Web" dependency only. Download and unzip.
 2. Add the `/status` controller described above, reading the ConfigMap value and Secret value from environment variables or mounted files.
-3. Write a `Dockerfile`, build the image locally.
+3. Write a `Dockerfile`, build the image locally `docker build -t status-app:local statusapp/`.
 4. Load the image into the cluster: `kind load docker-image <image>` (or build directly against `minikube`'s Docker daemon).
 5. Write the manifests by hand: `ConfigMap` (holds `config_value`), `Secret` (holds a placeholder credential), `Deployment` (runs the app, mounts both, wires up liveness/readiness probes against `/status`), `Service` (ClusterIP, routes to the Deployment's pods).
 6. `kubectl apply -f` all four manifests.
@@ -136,6 +137,7 @@ It never returns the raw secret value. The endpoint has no authentication, so an
 **Goal:** implement the `RotatingSecret` CRD and a real reconciler, first running on your laptop against the cluster, then packaged into the cluster itself.
 
 **Steps:**
+
 1. New Maven project, add `io.javaoperatorsdk:operator-framework-core` and `io.fabric8:kubernetes-client`.
 2. Define the resource as Java classes: `RotatingSecretSpec` (the fields from section 4), `RotatingSecretStatus` (same), and `RotatingSecret extends CustomResource<RotatingSecretSpec, RotatingSecretStatus>`.
 3. Generate the CRD YAML from those annotated classes (the SDK's Maven plugin does this) and `kubectl apply` it, this registers the type with the API server, same as section 3's `CustomResourceDefinition` step.
@@ -143,6 +145,7 @@ It never returns the raw secret value. The endpoint has no authentication, so an
 5. Run the operator locally on your laptop, pointed at the kind/minikube cluster via your kubeconfig, no container yet. Java Operator SDK supports this directly, so you can iterate fast before deploying it in-cluster.
 
 **Reconcile logic**, following the level-triggered model from section 6, every call re-derives the action from current state:
+
 - Read `spec.targetSecretName`, `rotationIntervalSeconds`, `length`.
 - Fetch the target `Secret` via the fabric8 client. If it doesn't exist, or `status.expiresAt` is in the past, rotate: generate a new value with `SecureRandom`, create or update the `Secret` (with an owner reference back to the `RotatingSecret`, so deleting the CR cleans up the `Secret` too).
 - Update `status`: `lastRotatedAt = now`, `expiresAt = now + rotationIntervalSeconds`, `rotationCount += 1`.
@@ -157,6 +160,7 @@ It never returns the raw secret value. The endpoint has no authentication, so an
 **Goal:** make the operator observable, installable in one command, and continuously built and tested. Still $0 — no cloud services added here.
 
 **Metrics.** Add Spring Boot Actuator with the Micrometer Prometheus registry, this is why Spring Boot is in the stack even though the reconciler itself doesn't need it. Inject a `MeterRegistry` into the reconciler and track:
+
 - `rotation_count` — counter, incremented each time a `Secret` is rotated, tagged by `RotatingSecret` name.
 - `seconds_since_last_rotation` — gauge per `RotatingSecret`, so you can alert if rotation silently stops happening.
 
@@ -175,16 +179,19 @@ The fix, borrowed from the open-source [Reloader](https://github.com/stakater/Re
 ## 10. Troubleshooting
 
 **Phase 1**
+
 - `ImagePullBackOff` — the image was built locally but never loaded into the cluster. Re-run `kind load docker-image` (or build against `minikube`'s Docker daemon).
 - `CrashLoopBackOff` on startup, probes failing — check that the port in the Dockerfile, the Deployment's `containerPort`, and the probe's `port` all match.
 - `/status` shows stale values after you edit the `ConfigMap`/`Secret` — env vars are only read once, at container startup. Editing the object doesn't restart the pod; you have to (`kubectl rollout restart deployment/...`).
 
 **Phase 3**
+
 - Reconciler never fires — confirm the CRD is actually applied (`kubectl get crd`) and that you applied the `RotatingSecret` in a namespace the operator is actually watching.
 - `403 Forbidden` in operator logs — check the `Role` covers the exact verbs needed, it's easy to grant access to `rotatingsecrets` but forget the separate `rotatingsecrets/status` subresource, which silently breaks status updates.
 - Rotates on every reconcile instead of on schedule — means the `expiresAt` check before generating a new value is missing or wrong.
 
 **Phase 4**
+
 - `/actuator/prometheus` 404s — add `management.endpoints.web.exposure.include=prometheus` to `application.properties`.
 - CI push to `ghcr.io` fails with permission denied — the workflow needs `permissions: packages: write` set explicitly; it isn't on by default.
 
