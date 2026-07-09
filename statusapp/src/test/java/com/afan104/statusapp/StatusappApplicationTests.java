@@ -1,10 +1,10 @@
-package com.afan104.status_app;
+package com.afan104.statusapp;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class StatusAppApplicationTests {
+class StatusappApplicationTests {
 
 	@Test
 	void contextLoads() {

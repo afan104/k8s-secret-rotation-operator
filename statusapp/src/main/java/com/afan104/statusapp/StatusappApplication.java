@@ -1,13 +1,13 @@
-package com.afan104.status_app;
+package com.afan104.statusapp;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class StatusAppApplication {
+public class StatusappApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(StatusAppApplication.class, args);
+		SpringApplication.run(StatusappApplication.class, args);
 	}
 
 }
