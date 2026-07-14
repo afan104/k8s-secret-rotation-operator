@@ -2,17 +2,17 @@ package com.afan104;
 
 public class RotatingSecretOperatorSpec {
 
-    private String targetSecretName;
+    private String secretName;
     private int length;
     private int rotationIntervalSeconds;
 
 
     public String getSecretName() {
-        return targetSecretName;
+        return secretName;
     }
 
-    public void setSecretName(String targetSecretName) {
-        this.targetSecretName = targetSecretName;
+    public void setSecretName(String secretName) {
+        this.secretName = secretName;
     }
     public int getLength() {
         return length;

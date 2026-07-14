@@ -11,7 +11,8 @@ public class Runner {
 
     public static void main(String[] args) {
         Operator operator = new Operator();
-        operator.register(new RotatingSecretOperatorReconciler());
+        operator.register(new RotatingSecretOperatorReconciler(),
+                override -> override.settingNamespace("default"));
         operator.start();
         log.info("Operator started.");
     }

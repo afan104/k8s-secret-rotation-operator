@@ -39,9 +39,7 @@ public class RotatingSecretOperatorReconciler implements Reconciler<RotatingSecr
                 primary.setStatus(new RotatingSecretOperatorStatus());
             }
             // rotate secret
-            byte[] secretBytes = new byte[length];
-            new SecureRandom().nextBytes(secretBytes);
-            String secretValue = Base64.getEncoder().encodeToString(secretBytes);
+            String secretValue = generateSecretValue(length);
 
             OwnerReference ownerRef = new OwnerReferenceBuilder()
                 .withApiVersion(primary.getApiVersion())
@@ -79,6 +77,16 @@ public class RotatingSecretOperatorReconciler implements Reconciler<RotatingSecr
             return UpdateControl.<RotatingSecretOperatorCustomResource>noUpdate()
         .rescheduleAfter(Duration.between(Instant.now(), primary.getStatus().getExpiresAt()));
         }
+    }
+
+    // spec.length is the final credential string's character count, not the raw byte count.
+    // Base64 encodes 3 bytes -> 4 chars, so we over-generate bytes then truncate to hit
+    // the exact requested length instead of whatever the encoding happens to produce.
+    private static String generateSecretValue(int length) {
+        int byteLength = (int) Math.ceil(length * 3.0 / 4);
+        byte[] secretBytes = new byte[byteLength];
+        new SecureRandom().nextBytes(secretBytes);
+        return Base64.getEncoder().withoutPadding().encodeToString(secretBytes).substring(0, length);
     }
 }
 

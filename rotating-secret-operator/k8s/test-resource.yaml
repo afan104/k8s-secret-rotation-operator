@@ -1,6 +1,0 @@
-apiVersion: com.afan104/v1
-kind: RotatingSecretOperatorCustomResource
-metadata:
-  name: test1
-spec:
-  value: test

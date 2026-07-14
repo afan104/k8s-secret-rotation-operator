@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rotating-secret-operator
+  labels:
+    app.kubernetes.io/name: rotating-secret-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rotating-secret-operator
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rotating-secret-operator
+    spec:
+      serviceAccountName: rotating-secret-operator
+      containers:
+        - name: rotating-secret-operator
+          image: rotating-secret-operator:local
+          imagePullPolicy: Never # image only exists locally, never try to pull from a registry
