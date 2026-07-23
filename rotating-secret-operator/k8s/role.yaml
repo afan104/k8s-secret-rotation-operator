@@ -9,6 +9,6 @@ rules:
   - apiGroups: ["com.afan104"]
     resources: ["rotatingsecrets/status"]
     verbs: ["get", "update", "patch"]
-  - apiGroups: [""]
+  - apiGroups: [""] # secrets is core k8s type so no apigroup
     resources: ["secrets"]
     verbs: ["get", "list", "watch", "create", "update", "patch"]

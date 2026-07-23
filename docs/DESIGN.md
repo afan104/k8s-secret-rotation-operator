@@ -1,3 +1,5 @@
+
+
 # Design: k8s-secret-rotation-operator
 
 A guide to building a Java Kubernetes Operator that rotates Secrets on a schedule. Follow it top to bottom to build the project yourself, or read it as a reference for how the pieces fit together.
@@ -64,7 +66,7 @@ A `RotatingSecret` has two parts: `spec`, which you write and the operator reads
 
 | Field                       | Type   | Meaning                                                        |
 | --------------------------- | ------ | -------------------------------------------------------------- |
-| `targetSecretName`        | string | Name of the`Secret` object the operator creates and updates. |
+| `secretName`              | string | Name of the`Secret` object the operator creates and updates. |
 | `rotationIntervalSeconds` | int    | How often to generate a new credential.                        |
 | `length`                  | int    | Length of the generated credential (default 32).               |
 
@@ -84,7 +86,7 @@ kind: RotatingSecret
 metadata:
   name: app-secret
 spec:
-  targetSecretName: app-secret
+  secretName: app-secret
   rotationIntervalSeconds: 3600
   length: 32
 status:
@@ -102,10 +104,10 @@ status:
 **The app:** one endpoint, `GET /status`, that reads a value injected from a `ConfigMap` and a value injected from a `Secret`, then returns:
 
 ```json
-{"config_value": "hello", "secret_loaded": true, "secret_length": 16}
+{ "config_value": "hello", "secret_loaded": true, "secret_length": 16 }
 ```
 
-It never returns the raw secret value. The endpoint has no authentication, so anything it returns is visible to whatever can reach it — returning the actual credential would defeat the point of a project about protecting credentials. Confirming the secret loaded, and its length, is enough to prove the wiring worked.
+It never returns the raw secret value. The endpoint has no authentication, so anything it returns is visible to whatever can reach it. Returning the actual credential would defeat the point of a project about protecting credentials. Confirming the secret loaded, and its length, is enough to prove the wiring worked.
 
 **Steps:**
 
@@ -138,7 +140,7 @@ It never returns the raw secret value. The endpoint has no authentication, so an
 
 **Steps:**
 
-1. New Maven project, add `io.javaoperatorsdk:operator-framework-core` and `io.fabric8:kubernetes-client`.
+1. New Maven project, scaffolded with the JOSDK bootstrapper plugin (`mvn io.javaoperatorsdk:bootstrapper:<version>:create`). Fabric8's Kubernetes client is the library that actually makes the Kubernetes API calls, and it's included as part of `io.javaoperatorsdk:operator-framework`, the dependency the bootstrapper wires in via a version-pinning BOM.
 2. Define the resource as Java classes: `RotatingSecretSpec` (the fields from section 4), `RotatingSecretStatus` (same), and `RotatingSecret extends CustomResource<RotatingSecretSpec, RotatingSecretStatus>`.
 3. Generate the CRD YAML from those annotated classes (the SDK's Maven plugin does this) and `kubectl apply` it, this registers the type with the API server, same as section 3's `CustomResourceDefinition` step.
 4. Write a `Reconciler<RotatingSecret>` class with one method, `reconcile(resource, context)`.
@@ -146,10 +148,10 @@ It never returns the raw secret value. The endpoint has no authentication, so an
 
 **Reconcile logic**, following the level-triggered model from section 6, every call re-derives the action from current state:
 
-- Read `spec.targetSecretName`, `rotationIntervalSeconds`, `length`.
+- Read `spec.secretName`, `rotationIntervalSeconds`, `length`.
 - Fetch the target `Secret` via the fabric8 client. If it doesn't exist, or `status.expiresAt` is in the past, rotate: generate a new value with `SecureRandom`, create or update the `Secret` (with an owner reference back to the `RotatingSecret`, so deleting the CR cleans up the `Secret` too).
 - Update `status`: `lastRotatedAt = now`, `expiresAt = now + rotationIntervalSeconds`, `rotationCount += 1`.
-- Return `UpdateControl.patchStatus(resource).rescheduleAfter(...)`, requeuing for whenever the credential is next due to expire. If it isn't expired yet, skip rotation and just reschedule for the remaining time.
+- Return `UpdateControl.patchStatus(resource).rescheduleAfter(...)`, requeuing for whenever the credential is next due to expire. If it isn't expired yet, skip rotation and just reschedule for the remaining time with `noUpdate` instead of `patchStatus`.
 
 **Move it into the cluster:** write a `Dockerfile`, build and `kind load docker-image` it, then write a `Deployment` for the operator plus a `ServiceAccount`, `Role`, and `RoleBinding` granting it `get/list/watch/update` on `rotatingsecrets` (and its `status` subresource) and `get/list/watch/create/update/patch` on `secrets`.
 
@@ -157,7 +159,7 @@ It never returns the raw secret value. The endpoint has no authentication, so an
 
 ## 8. Walkthrough: Phase 4 — Observability, Helm, CI
 
-**Goal:** make the operator observable, installable in one command, and continuously built and tested. Still $0 — no cloud services added here.
+**Goal:** make the operator observable, installable in one command, and continuously built and tested. Still $0, no cloud services added here.
 
 **Metrics.** Add Spring Boot Actuator with the Micrometer Prometheus registry, this is why Spring Boot is in the stack even though the reconciler itself doesn't need it. Inject a `MeterRegistry` into the reconciler and track:
 
@@ -189,6 +191,7 @@ The fix, borrowed from the open-source [Reloader](https://github.com/stakater/Re
 - Reconciler never fires — confirm the CRD is actually applied (`kubectl get crd`) and that you applied the `RotatingSecret` in a namespace the operator is actually watching.
 - `403 Forbidden` in operator logs — check the `Role` covers the exact verbs needed, it's easy to grant access to `rotatingsecrets` but forget the separate `rotatingsecrets/status` subresource, which silently breaks status updates.
 - Rotates on every reconcile instead of on schedule — means the `expiresAt` check before generating a new value is missing or wrong.
+- Code changes don't take effect while running locally because there's no hot-reload. After editing the reconciler (or any class affecting its behavior), stop the running process, run `mvn package` to rebuild the jar, then run `java -jar target/rotating-secret-operator-<version>.jar` again. The cluster and the CR you already applied don't need to be touched again, only the operator process itself.
 
 **Phase 4**
 

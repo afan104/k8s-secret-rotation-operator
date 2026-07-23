@@ -19,6 +19,7 @@
         <junit.version>5.9.2</junit.version>
         <log4j.version>2.20.0</log4j.version>
         <fabric8-client.version>7.3.1</fabric8-client.version>
+        <spring-boot.version>3.5.3</spring-boot.version>
     </properties>
 
     <dependencyManagement>
@@ -30,6 +31,13 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -38,6 +46,18 @@
             <groupId>io.javaoperatorsdk</groupId>
             <artifactId>operator-framework</artifactId>
             <version>${josdk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
         <dependency>
             <groupId>io.javaoperatorsdk</groupId>
