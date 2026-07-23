@@ -41,7 +41,7 @@ service:
   # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
   type: ClusterIP
   # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
-  port: 80
+  port: 8080
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
@@ -55,7 +55,14 @@ resources: {}
   #   cpu: 100m
   #   memory: 128Mi
 
-# Liveness and readiness probes are disabled until the operator has an HTTP endpoint to check (Actuator adds one).
+livenessProbe:
+  httpGet:
+    path: /actuator/health
+    port: http
+readinessProbe:
+  httpGet:
+    path: /actuator/health
+    port: http
 
 # Additional volumes on the output Deployment definition.
 volumes: []

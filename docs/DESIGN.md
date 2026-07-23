@@ -163,7 +163,7 @@ It never returns the raw secret value. The endpoint has no authentication, so an
 
 **Metrics.** Add Spring Boot Actuator with the Micrometer Prometheus registry, this is why Spring Boot is in the stack even though the reconciler itself doesn't need it. Inject a `MeterRegistry` into the reconciler and track:
 
-- `rotation_count` — counter, incremented each time a `Secret` is rotated, tagged by `RotatingSecret` name.
+- `rotation_countJ`, incremented each time a `Secret` is rotated, tagged by `RotatingSecret` name.
 - `seconds_since_last_rotation` — gauge per `RotatingSecret`, so you can alert if rotation silently stops happening.
 
 Actuator exposes these at `/actuator/prometheus` automatically. Install Prometheus and Grafana into the same local cluster via their Helm charts, point Prometheus's scrape config at the operator's metrics endpoint, and build one Grafana panel per metric.

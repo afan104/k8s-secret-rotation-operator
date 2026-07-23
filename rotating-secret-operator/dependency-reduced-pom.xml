@@ -37,6 +37,9 @@
                 <transformer>
                   <mainClass>com.afan104.Runner</mainClass>
                 </transformer>
+                <transformer>
+                  <resource>META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports</resource>
+                </transformer>
               </transformers>
             </configuration>
           </execution>
@@ -107,6 +110,13 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${spring-boot.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
     </dependencies>
   </dependencyManagement>
   <properties>
@@ -117,6 +127,7 @@
     <josdk.version>5.1.1</josdk.version>
     <log4j.version>2.20.0</log4j.version>
     <junit.version>5.9.2</junit.version>
+    <spring-boot.version>3.5.3</spring-boot.version>
     <fabric8-client.version>7.3.1</fabric8-client.version>
   </properties>
 </project>
