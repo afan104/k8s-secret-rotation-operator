@@ -1,5 +1,3 @@
-
-
 # Design: k8s-secret-rotation-operator
 
 A guide to building a Java Kubernetes Operator that rotates Secrets on a schedule. Follow it top to bottom to build the project yourself, or read it as a reference for how the pieces fit together.
@@ -20,13 +18,13 @@ Everything here is free and runs locally. No cloud account or billing is require
 
 | Tool             | Version  | Purpose                                                           |
 | ---------------- | -------- | ----------------------------------------------------------------- |
-| Java             | 21 (LTS) | Language runtime. Install via`mise` or SDKMAN.                  |
+| Java             | 21 (LTS) | Language runtime. Install via`mise` or SDKMAN.                    |
 | Maven            | 3.9+     | Build tool. Java Operator SDK ships a Maven quickstart archetype. |
 | Docker           | latest   | Builds container images; backs kind/minikube.                     |
 | kind or minikube | latest   | Runs a real local Kubernetes cluster.                             |
 | kubectl          | latest   | Talk to the cluster.                                              |
 | Helm             | 3.x      | Package and install the operator.                                 |
-| gh (GitHub CLI)  | latest   | Already installed and authenticated as`afan104`.                |
+| gh (GitHub CLI)  | latest   | Already installed and authenticated as`afan104`.                  |
 
 IDE: IntelliJ IDEA (Community Edition is free) is recommended over VS Code for this project, its Java and Spring Boot support is more complete. Not required, just easier.
 
@@ -64,19 +62,19 @@ A `RotatingSecret` has two parts: `spec`, which you write and the operator reads
 
 **Spec fields:**
 
-| Field                       | Type   | Meaning                                                        |
-| --------------------------- | ------ | -------------------------------------------------------------- |
+| Field                     | Type   | Meaning                                                      |
+| ------------------------- | ------ | ------------------------------------------------------------ |
 | `secretName`              | string | Name of the`Secret` object the operator creates and updates. |
-| `rotationIntervalSeconds` | int    | How often to generate a new credential.                        |
-| `length`                  | int    | Length of the generated credential (default 32).               |
+| `rotationIntervalSeconds` | int    | How often to generate a new credential.                      |
+| `length`                  | int    | Length of the generated credential (default 32).             |
 
 **Status fields:**
 
-| Field             | Type      | Meaning                                                                             |
-| ----------------- | --------- | ----------------------------------------------------------------------------------- |
-| `lastRotatedAt` | timestamp | When the credential was last generated.                                             |
-| `expiresAt`     | timestamp | `lastRotatedAt` + `rotationIntervalSeconds`. The operator requeues before this. |
-| `rotationCount` | int       | Incremented on every rotation, useful for confirming the loop is actually running.  |
+| Field           | Type      | Meaning                                                                            |
+| --------------- | --------- | ---------------------------------------------------------------------------------- |
+| `lastRotatedAt` | timestamp | When the credential was last generated.                                            |
+| `expiresAt`     | timestamp | `lastRotatedAt` + `rotationIntervalSeconds`. The operator requeues before this.    |
+| `rotationCount` | int       | Incremented on every rotation, useful for confirming the loop is actually running. |
 
 **Example**, after the operator has reconciled it at least once:
 
@@ -163,7 +161,7 @@ It never returns the raw secret value. The endpoint has no authentication, so an
 
 **Metrics.** Add Spring Boot Actuator with the Micrometer Prometheus registry, this is why Spring Boot is in the stack even though the reconciler itself doesn't need it. Inject a `MeterRegistry` into the reconciler and track:
 
-- `rotation_countJ`, incremented each time a `Secret` is rotated, tagged by `RotatingSecret` name.
+- `rotation_count`, incremented each time a `Secret` is rotated, tagged by `RotatingSecret` name.
 - `seconds_since_last_rotation` — gauge per `RotatingSecret`, so you can alert if rotation silently stops happening.
 
 Actuator exposes these at `/actuator/prometheus` automatically. Install Prometheus and Grafana into the same local cluster via their Helm charts, point Prometheus's scrape config at the operator's metrics endpoint, and build one Grafana panel per metric.

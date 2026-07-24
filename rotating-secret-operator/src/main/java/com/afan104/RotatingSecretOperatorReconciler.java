@@ -13,9 +13,25 @@ import java.util.Base64;
 import java.util.Map;
 import java.time.Instant;
 import java.time.Duration;
-    
+import java.util.concurrent.atomic.AtomicReference;
+
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 
 public class RotatingSecretOperatorReconciler implements Reconciler<RotatingSecretOperatorCustomResource> {
+
+    private final Counter rotationCounter;
+    private final Gauge secondsSinceLastRotation;
+    private final AtomicReference<Instant> lastRotatedAt;
+
+    public RotatingSecretOperatorReconciler (MeterRegistry meterRegistry) {
+        this.rotationCounter = meterRegistry.counter("rotation_count");
+        this.lastRotatedAt = new AtomicReference<>(Instant.now());
+        this.secondsSinceLastRotation = Gauge.builder("seconds_since_last_rotation", lastRotatedAt,
+                ref -> Duration.between(ref.get(), Instant.now()).getSeconds())
+            .register(meterRegistry);
+    }
 
     public UpdateControl<RotatingSecretOperatorCustomResource> reconcile(RotatingSecretOperatorCustomResource primary,
                                                      Context<RotatingSecretOperatorCustomResource> context) {
@@ -61,6 +77,11 @@ public class RotatingSecretOperatorReconciler implements Reconciler<RotatingSecr
             context.getClient().resource(secret)
                 .inNamespace(primary.getMetadata().getNamespace())
                 .createOrReplace();
+            
+            // update MeterRegistry
+            this.rotationCounter.increment();
+            this.lastRotatedAt.set(Instant.now());
+
 
             // update status vals
             primary.getStatus().setLastRotatedAt(Instant.now());
